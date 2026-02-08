@@ -48,7 +48,7 @@ const parallaxSpring = { stiffness: 120, damping: 18, mass: 1 };
 const tiltSpring = { stiffness: 250, damping: 20, mass: 0.5 };
 
 // Parallax movement range (px). Deepest layer moves ±(0.5 × depth × RANGE)
-const PARALLAX_RANGE = 50;
+const PARALLAX_RANGE = 60;
 
 // [transform-3d-preserve] Max card tilt in degrees
 const MAX_TILT = 8;

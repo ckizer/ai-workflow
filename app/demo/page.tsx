@@ -295,6 +295,38 @@ const websiteDeckSpringTransition = {
   mass: 1,
 };
 
+// ── Shadow recipe card styles ────────────────────────────────────────────────
+
+const invoiceCardShadow =
+  "0px 0px 0px 1px oklab(0.141 0.00136173 -0.00480696 / 0.075), 0px 20px 25px -5px oklab(0 0 0 / 0.06), 0px 8px 10px -6px oklab(0 0 0 / 0.06)";
+
+const invoiceCardHoverShadow =
+  "0px 0px 0px 1px oklab(0.141 0.00136173 -0.00480696 / 0.075), 0px 25px 30px -5px oklab(0 0 0 / 0.10), 0px 12px 15px -6px oklab(0 0 0 / 0.08)";
+
+function InvoiceCard() {
+  return (
+    <div
+      className="relative rounded-xl p-6 bg-white cursor-pointer transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5"
+      style={{ boxShadow: invoiceCardShadow }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = invoiceCardHoverShadow;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = invoiceCardShadow;
+      }}
+    >
+      <p className="text-xs font-mono text-neutral-400 mb-2">INV-456789</p>
+      <p className="text-3xl font-bold text-neutral-900">$284,342.57</p>
+      <p className="text-sm text-neutral-500 mt-1">Due in 15 days</p>
+      <div className="mt-4 flex items-center gap-2">
+        <div className="h-8 px-4 rounded-lg bg-indigo-600 text-white text-sm font-medium flex items-center">
+          Sign here
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Parallax Design Principles Cards ────────────────────────────────────────
 
 // Speed - Blue/cyan theme with motion elements
@@ -535,6 +567,65 @@ export default function DemoPage() {
               />
             </m.div>
           </m.div>
+        </div>
+
+        {/* ── Shadow & Gradient Glow Showcase ──────────────────────────────── */}
+        <div className="w-full max-w-5xl mt-24">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-900">
+              Card Shadow Recipes
+            </h2>
+            <p className="mt-3 text-neutral-600 text-lg">
+              Abstracted shadow styles and a blur-gradient glow you can remix
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-start justify-center gap-12 overflow-visible">
+
+            {/* ─ Card 1: Exact shadow from the reference site ─ */}
+            <div className="flex flex-col items-center gap-3 max-w-[340px]">
+              <InvoiceCard />
+              <div className="text-center">
+                <p className="text-sm font-semibold text-neutral-700">Tailark Shadow</p>
+                <p className="text-xs text-neutral-400 mt-0.5 max-w-60">oklab ring + two offset shadows at 6% opacity</p>
+              </div>
+            </div>
+
+            {/* ─ Card 2: Blur gradient glow behind the card (always visible) ─ */}
+            <div className="flex flex-col items-center gap-3 max-w-[340px]">
+              <div className="relative overflow-visible py-10 px-8">
+                {/* The glow — static background, never changes on hover */}
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 bg-linear-to-r from-indigo-400 via-purple-400 to-pink-400 opacity-40"
+                  style={{ filter: "blur(60px)" }}
+                />
+                {/* The card itself */}
+                <InvoiceCard />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-semibold text-neutral-700">Gradient Glow</p>
+                <p className="text-xs text-neutral-400 mt-0.5 max-w-60">Static blurred gradient behind the card</p>
+              </div>
+            </div>
+
+            {/* ─ Card 3: Cyan gradient glow (always visible, different palette) ─ */}
+            <div className="flex flex-col items-center gap-3 max-w-[340px]">
+              <div className="relative overflow-visible py-10 px-8">
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 bg-linear-to-r from-cyan-400 via-blue-400 to-indigo-400 opacity-40"
+                  style={{ filter: "blur(60px)" }}
+                />
+                <InvoiceCard />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-semibold text-neutral-700">Cool Glow</p>
+                <p className="text-xs text-neutral-400 mt-0.5 max-w-60">Same technique, different gradient palette</p>
+              </div>
+            </div>
+
+          </div>
         </div>
       </div>
     </LazyMotion>
