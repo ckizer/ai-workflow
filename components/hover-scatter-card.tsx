@@ -183,11 +183,13 @@ export function HoverScatterCard({
       whileHover="hover"
       // [physics-active-state] subtle press feedback
       // [polish-reduced-motion] opacity-only when motion is reduced
+      // this is the reusable card class
       whileTap="tap"
       className={`
         relative flex flex-col items-center
-        w-[260px] rounded-2xl bg-[#f5f5f5]
+        w-[260px] rounded-2xl bg-[#f5f5f5] border border-[#E6E6E6]
         cursor-pointer select-none
+        shadow-[inset_0_-6px_0_1px_rgba(0,0,0,0.02)]
         ${className}
       `}
     >

@@ -1,8 +1,36 @@
 "use client";
 
 import { LazyMotion, domAnimation } from "motion/react";
+import * as m from "motion/react-m";
 import { HoverScatterCard } from "@/components/hover-scatter-card";
 import type { FloatingItem, DeckCard } from "@/components/hover-scatter-card";
+import { ParallaxDepthCard } from "@/components/parallax-depth-card";
+import type { ParallaxLayer } from "@/components/parallax-depth-card";
+
+// [rerender-variants-object] Stagger variants hoisted outside component
+// [polish-stagger-children] Orchestrated reveal for design principles cards
+const staggerContainer = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.12,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const staggerItem = {
+  hidden: { opacity: 0, y: 24 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    // [ease-out-default] Entrance motion → ease-out
+    transition: {
+      duration: 0.5,
+      ease: [0, 0, 0.2, 1] as [number, number, number, number],
+    },
+  },
+};
 
 // ── Hero mockups (colored div placeholders) ──────────────────────────────────
 
@@ -10,7 +38,7 @@ function BrowserMockup() {
   // Original reference: 148 × 103 pt (~1.44:1 ratio)
   return (
     <div
-      className="bg-white overflow-hidden"
+      className="bg-neutral-50 overflow-hidden"
       style={{
         width: 168,
         height: 117,
@@ -267,6 +295,141 @@ const websiteDeckSpringTransition = {
   mass: 1,
 };
 
+// ── Parallax Design Principles Cards ────────────────────────────────────────
+
+// Speed - Blue/cyan theme with motion elements
+const speedLayers: ParallaxLayer[] = [
+  {
+    id: "speed-bg",
+    depth: 0.2,
+    children: (
+      <div className="w-48 h-48 rounded-full bg-linear-to-br from-blue-400 to-cyan-400 blur-3xl opacity-40" />
+    ),
+  },
+  {
+    id: "speed-streaks",
+    depth: 0.5,
+    children: (
+      <div className="relative w-full h-full">
+        <div className="absolute top-1/3 left-1/4 w-32 h-1 bg-blue-500/30 rounded-full rotate-12" />
+        <div className="absolute top-1/2 right-1/4 w-24 h-1 bg-cyan-500/30 rounded-full -rotate-12" />
+        <div className="absolute bottom-1/3 left-1/3 w-28 h-1 bg-blue-400/30 rounded-full rotate-6" />
+      </div>
+    ),
+  },
+  {
+    id: "speed-icon",
+    depth: 0.9,
+    children: (
+      <div className="w-20 h-20 rounded-2xl bg-linear-to-br from-blue-500 to-cyan-500 shadow-2xl flex items-center justify-center">
+        <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      </div>
+    ),
+  },
+];
+
+// Clarity - Purple/indigo theme with geometric structure
+const clarityLayers: ParallaxLayer[] = [
+  {
+    id: "clarity-bg",
+    depth: 0.2,
+    children: (
+      <div className="w-48 h-48 rounded-full bg-linear-to-br from-purple-400 to-indigo-400 blur-3xl opacity-40" />
+    ),
+  },
+  {
+    id: "clarity-grid",
+    depth: 0.5,
+    children: (
+      <div className="w-40 h-40 border-2 border-purple-300/30 rounded-2xl grid grid-cols-3 grid-rows-3 gap-2 p-4">
+        {Array.from({ length: 9 }).map((_, i) => (
+          <div key={i} className="rounded bg-purple-200/20" />
+        ))}
+      </div>
+    ),
+  },
+  {
+    id: "clarity-icon",
+    depth: 0.9,
+    children: (
+      <div className="w-20 h-20 rounded-2xl bg-linear-to-br from-purple-500 to-indigo-500 shadow-2xl flex items-center justify-center">
+        <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        </svg>
+      </div>
+    ),
+  },
+];
+
+// Delight - Orange/rose theme with playful elements
+const delightLayers: ParallaxLayer[] = [
+  {
+    id: "delight-bg",
+    depth: 0.2,
+    children: (
+      <div className="w-48 h-48 rounded-full bg-linear-to-br from-orange-400 to-rose-400 blur-3xl opacity-40" />
+    ),
+  },
+  {
+    id: "delight-shapes",
+    depth: 0.5,
+    children: (
+      <div className="relative w-full h-full">
+        <div className="absolute top-1/4 left-1/4 w-12 h-12 rounded-full bg-orange-300/40" />
+        <div className="absolute bottom-1/3 right-1/4 w-16 h-16 rounded-lg bg-rose-300/40 rotate-12" />
+        <div className="absolute top-1/2 right-1/3 w-10 h-10 bg-orange-400/40 rotate-45" />
+      </div>
+    ),
+  },
+  {
+    id: "delight-icon",
+    depth: 0.9,
+    children: (
+      <div className="w-20 h-20 rounded-2xl bg-linear-to-br from-orange-500 to-rose-500 shadow-2xl flex items-center justify-center">
+        <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+    ),
+  },
+];
+
+// Trust - Green/teal theme with shield/security elements
+const trustLayers: ParallaxLayer[] = [
+  {
+    id: "trust-bg",
+    depth: 0.2,
+    children: (
+      <div className="w-48 h-48 rounded-full bg-linear-to-br from-emerald-400 to-teal-400 blur-3xl opacity-40" />
+    ),
+  },
+  {
+    id: "trust-rings",
+    depth: 0.5,
+    children: (
+      <div className="relative w-full h-full flex items-center justify-center">
+        <div className="w-32 h-32 rounded-full border-2 border-emerald-300/30" />
+        <div className="absolute w-24 h-24 rounded-full border-2 border-teal-300/40" />
+        <div className="absolute w-16 h-16 rounded-full border-2 border-emerald-400/50" />
+      </div>
+    ),
+  },
+  {
+    id: "trust-icon",
+    depth: 0.9,
+    children: (
+      <div className="w-20 h-20 rounded-2xl bg-linear-to-br from-emerald-500 to-teal-500 shadow-2xl flex items-center justify-center">
+        <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+      </div>
+    ),
+  },
+];
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DemoPage() {
@@ -274,13 +437,18 @@ export default function DemoPage() {
     <LazyMotion features={domAnimation}>
       <div className="min-h-screen w-full bg-white overflow-auto flex flex-col items-center justify-center gap-12 p-10">
         {/* Header */}
-        <div className="text-center max-w-lg">
-          <h1 className="text-3xl font-bold text-neutral-900 text-balance">
-            Hover Scatter Cards
+        <div className="text-center max-w-2xl">
+          <h1 className="text-4xl md:text-5xl font-bold text-neutral-900 text-balance leading-tight">
+            Designers Who Ship AI Products That Users Actually Want
           </h1>
-          <p className="mt-2 text-neutral-500 text-base text-pretty">
-            Hover over each card. Icons scatter out and clip at the card edge,
-            the hero scales up, and a deck of cards fans out behind.
+          <p className="mt-4 text-neutral-600 text-lg md:text-xl text-pretty leading-relaxed">
+            Most designers build interfaces. We build AI-native experiences that feel magical, not mechanical. 
+            <span className="font-medium text-neutral-900"> We specialize in the unique challenges of AI product design</span>—handling uncertainty, 
+            managing expectations, and creating trust when the product thinks for itself.
+          </p>
+          <p className="mt-3 text-neutral-500 text-base">
+            If you&apos;re shipping AI features and need someone who understands both design systems and AI systems, 
+            <span className="text-neutral-700 font-medium"> let&apos;s talk.</span>
           </p>
         </div>
 
@@ -313,6 +481,60 @@ export default function DemoPage() {
             deckTransition={websiteDeckSpringTransition}
             staggerChildren={0.035}
           />
+        </div>
+
+        {/* Parallax Design Principles Section */}
+        <div className="w-full max-w-5xl mt-24">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-900">
+              How We Design
+            </h2>
+            <p className="mt-3 text-neutral-600 text-lg">
+              Every decision guided by principles that create better experiences
+            </p>
+          </div>
+
+          {/* [polish-scroll-reveal] Trigger when meaningfully in viewport */}
+          <m.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px 0px" }}
+            variants={staggerContainer}
+            className="grid grid-cols-1 md:grid-cols-2 gap-8 justify-items-center"
+          >
+            <m.div variants={staggerItem}>
+              <ParallaxDepthCard
+                title="Speed"
+                subtitle="Fast interactions build trust"
+                layers={speedLayers}
+                theme="blue"
+              />
+            </m.div>
+            <m.div variants={staggerItem}>
+              <ParallaxDepthCard
+                title="Clarity"
+                subtitle="Clear paths reduce friction"
+                layers={clarityLayers}
+                theme="purple"
+              />
+            </m.div>
+            <m.div variants={staggerItem}>
+              <ParallaxDepthCard
+                title="Delight"
+                subtitle="Joy makes products memorable"
+                layers={delightLayers}
+                theme="orange"
+              />
+            </m.div>
+            <m.div variants={staggerItem}>
+              <ParallaxDepthCard
+                title="Trust"
+                subtitle="Reliability enables adoption"
+                layers={trustLayers}
+                theme="green"
+              />
+            </m.div>
+          </m.div>
         </div>
       </div>
     </LazyMotion>

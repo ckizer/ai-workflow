@@ -12,8 +12,14 @@ yarn dev
 pnpm dev
 # or
 bun dev
-```
 
+
+Or this crappy way to vercel deply that reaches outside of this directory:
+```
+cd /Users/ck/Documents/harvard-dev/ai-workflow && bash /Users/ck/.codex/skills/vercel-deploy/scripts/deploy.sh
+
+THEN to check after waiting:
+cd /Users/ck/Documents/harvard-dev/ai-workflow && npx vercel --yes --prod 2>&1
 ```
 start by doing 
 bun run dev
