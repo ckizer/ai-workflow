@@ -67,7 +67,7 @@ function CodeEditorMockup() {
         </div>
         <div className="flex gap-1 pl-3">
           <span className="text-blue-400">&lt;title&gt;</span>
-          <span className="text-green-300">Hi people!</span>
+          <span className="text-green-300">Hi Human!</span>
           <span className="text-blue-400">&lt;/title&gt;</span>
         </div>
         <div className="flex gap-1">

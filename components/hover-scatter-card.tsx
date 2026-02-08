@@ -1,6 +1,7 @@
 "use client";
 
 import * as m from "motion/react-m";
+import { useReducedMotion } from "motion/react";
 import type { Variants, Transition } from "motion/react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -69,7 +70,7 @@ const defaultDeckTransition: Transition = {
 // ── Variant builders ─────────────────────────────────────────────────────────
 // rerender-variants-object: all defined outside component for stable refs
 
-function buildCardVariants(stagger?: number): Variants {
+function buildCardVariants(stagger?: number, reducedMotion?: boolean): Variants {
   return {
     rest: {
       scale: 1,
@@ -80,11 +81,22 @@ function buildCardVariants(stagger?: number): Variants {
       transition: stagger ? { staggerChildren: stagger } : undefined,
     },
     // [physics-active-state] pressed state with subtle deformation
-    tap: { scale: 0.98 },
+    // [polish-reduced-motion] opacity-only feedback when motion is reduced
+    tap: reducedMotion ? { opacity: 0.9 } : { scale: 0.98 },
   };
 }
 
-function buildItemVariants(hover: FloatingItemHover): Variants {
+function buildItemVariants(
+  hover: FloatingItemHover,
+  reducedMotion: boolean
+): Variants {
+  if (reducedMotion) {
+    // [polish-reduced-motion] fade-only alternative (no transforms)
+    return {
+      rest: { opacity: 1 },
+      hover: { opacity: hover.opacity ?? 0 },
+    };
+  }
   return {
     rest: { x: 0, y: 0, rotate: 0, scale: 1, opacity: 1 },
     hover: {
@@ -97,7 +109,14 @@ function buildItemVariants(hover: FloatingItemHover): Variants {
   };
 }
 
-function buildDeckVariants(card: DeckCard): Variants {
+function buildDeckVariants(card: DeckCard, reducedMotion: boolean): Variants {
+  if (reducedMotion) {
+    // [polish-reduced-motion] fade-only alternative (no transforms)
+    return {
+      rest: { opacity: card.rest.opacity ?? 0 },
+      hover: { opacity: card.hover.opacity ?? 1 },
+    };
+  }
   return {
     rest: {
       rotate: card.rest.rotate,
@@ -116,7 +135,17 @@ function buildDeckVariants(card: DeckCard): Variants {
   };
 }
 
-function buildHeroVariants(hoverScale: number): Variants {
+function buildHeroVariants(
+  hoverScale: number,
+  reducedMotion: boolean
+): Variants {
+  if (reducedMotion) {
+    // [polish-reduced-motion] subtle opacity change instead of scale
+    return {
+      rest: { opacity: 1 },
+      hover: { opacity: 0.95 },
+    };
+  }
   return {
     rest: { scale: 1 },
     hover: { scale: hoverScale },
@@ -124,47 +153,8 @@ function buildHeroVariants(hoverScale: number): Variants {
 }
 
 // ── Module-level caches ──────────────────────────────────────────────────────
-const itemVariantCache = new Map<string, Variants>();
-const deckVariantCache = new Map<string, Variants>();
-const heroVariantCache = new Map<number, Variants>();
-const cardVariantCache = new Map<string, Variants>();
-
-function getCachedItemVariants(item: FloatingItem): Variants {
-  let v = itemVariantCache.get(item.id);
-  if (!v) {
-    v = buildItemVariants(item.hover);
-    itemVariantCache.set(item.id, v);
-  }
-  return v;
-}
-
-function getCachedDeckVariants(card: DeckCard): Variants {
-  let v = deckVariantCache.get(card.id);
-  if (!v) {
-    v = buildDeckVariants(card);
-    deckVariantCache.set(card.id, v);
-  }
-  return v;
-}
-
-function getCachedHeroVariants(scale: number): Variants {
-  let v = heroVariantCache.get(scale);
-  if (!v) {
-    v = buildHeroVariants(scale);
-    heroVariantCache.set(scale, v);
-  }
-  return v;
-}
-
-function getCachedCardVariants(stagger?: number): Variants {
-  const key = String(stagger ?? "none");
-  let v = cardVariantCache.get(key);
-  if (!v) {
-    v = buildCardVariants(stagger);
-    cardVariantCache.set(key, v);
-  }
-  return v;
-}
+// Note: Variants are built per-render based on reducedMotion preference
+// (can't cache because reducedMotion is dynamic, so we build fresh each render)
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -180,15 +170,19 @@ export function HoverScatterCard({
   staggerChildren,
   className = "",
 }: HoverScatterCardProps) {
+  // [polish-reduced-motion] detect user's motion preference
+  const shouldReduceMotion = useReducedMotion();
+
   const resolvedItemTransition = itemTransition ?? defaultItemTransition;
   const resolvedDeckTransition = deckTransitionProp ?? defaultDeckTransition;
 
   return (
     <m.div
-      variants={getCachedCardVariants(staggerChildren)}
+      variants={buildCardVariants(staggerChildren, shouldReduceMotion ?? false)}
       initial="rest"
       whileHover="hover"
       // [physics-active-state] subtle press feedback
+      // [polish-reduced-motion] opacity-only when motion is reduced
       whileTap="tap"
       className={`
         relative flex flex-col items-center
@@ -204,7 +198,7 @@ export function HoverScatterCard({
         {deck?.map((card) => (
           <m.div
             key={card.id}
-            variants={getCachedDeckVariants(card)}
+            variants={buildDeckVariants(card, shouldReduceMotion ?? false)}
             transition={resolvedDeckTransition}
             className={`absolute z-5 bg-white ${card.className ?? ""}`}
             style={{
@@ -221,7 +215,7 @@ export function HoverScatterCard({
         {heroHoverScale !== 1 ? (
           <m.div
             className="relative z-10"
-            variants={getCachedHeroVariants(heroHoverScale)}
+            variants={buildHeroVariants(heroHoverScale, shouldReduceMotion ?? false)}
             transition={defaultHeroTransition}
           >
             {hero}
@@ -234,7 +228,7 @@ export function HoverScatterCard({
         {items.map((item) => (
           <m.div
             key={item.id}
-            variants={getCachedItemVariants(item)}
+            variants={buildItemVariants(item.hover, shouldReduceMotion ?? false)}
             transition={resolvedItemTransition}
             className={`absolute z-20 ${item.className}`}
             style={item.style}
