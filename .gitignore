@@ -44,5 +44,6 @@ next-env.d.ts
 .cursor/
 .agents/
 
-# large demo files
+# large demo files and files with secrets
 *.cast
+public/openclaw_install.cast
