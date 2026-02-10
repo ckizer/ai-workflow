@@ -1,11 +1,12 @@
 "use client";
 
-import { LazyMotion, domAnimation } from "motion/react";
+import { LazyMotion, domAnimation, useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
 import { HoverScatterCard } from "@/components/hover-scatter-card";
 import type { FloatingItem, DeckCard } from "@/components/hover-scatter-card";
 import { ParallaxDepthCard } from "@/components/parallax-depth-card";
 import type { ParallaxLayer } from "@/components/parallax-depth-card";
+import { PricingCard } from "@/components/pricing-card";
 
 // [rerender-variants-object] Stagger variants hoisted outside component
 // [polish-stagger-children] Orchestrated reveal for design principles cards
@@ -124,7 +125,9 @@ function StyleGuideMockup() {
       </div>
       <div className="flex gap-4">
         <div>
-          <span className="text-[8px] text-neutral-400 block mb-1">Colours</span>
+          <span className="text-[8px] text-neutral-400 block mb-1">
+            Colours
+          </span>
           <div className="flex gap-0.5">
             <span className="w-3 h-3 rounded bg-indigo-500" />
             <span className="w-3 h-3 rounded bg-rose-400" />
@@ -137,7 +140,9 @@ function StyleGuideMockup() {
           </div>
         </div>
         <div>
-          <span className="text-[8px] text-neutral-400 block mb-1">Typography</span>
+          <span className="text-[8px] text-neutral-400 block mb-1">
+            Typography
+          </span>
           <div className="space-y-1">
             <div className="w-12 h-1.5 rounded bg-neutral-300" />
             <div className="w-10 h-1.5 rounded bg-neutral-200" />
@@ -204,7 +209,7 @@ const websiteDeck: DeckCard[] = [
   },
   {
     id: "deck-3",
-    rest: { rotate: 0, x: 0, y: 0, opacity: 0, scale: 0.90 },
+    rest: { rotate: 0, x: 0, y: 0, opacity: 0, scale: 0.9 },
     hover: { rotate: 22, x: 10, y: 12, opacity: 0.85, scale: 0.95 },
   },
 ];
@@ -295,35 +300,236 @@ const websiteDeckSpringTransition = {
   mass: 1,
 };
 
-// ── Shadow recipe card styles ────────────────────────────────────────────────
+// ── Shadow recipe card hover animations ──────────────────────────────────────
 
-const invoiceCardShadow =
-  "0px 0px 0px 1px oklab(0.141 0.00136173 -0.00480696 / 0.075), 0px 20px 25px -5px oklab(0 0 0 / 0.06), 0px 8px 10px -6px oklab(0 0 0 / 0.06)";
+// [rerender-variants-object] Shadow values use rgba for smooth motion interpolation
+const invoiceCardShadowRest =
+  "0px 0px 0px 1px rgba(0, 0, 0, 0.075), 0px 20px 25px -5px rgba(0, 0, 0, 0.06), 0px 8px 10px -6px rgba(0, 0, 0, 0.06)";
 
-const invoiceCardHoverShadow =
-  "0px 0px 0px 1px oklab(0.141 0.00136173 -0.00480696 / 0.075), 0px 25px 30px -5px oklab(0 0 0 / 0.10), 0px 12px 15px -6px oklab(0 0 0 / 0.08)";
+// Deeper, more spread shadow on hover for dramatic lift
+const invoiceCardShadowHover =
+  "0px 0px 0px 1px rgba(0, 0, 0, 0.075), 0px 32px 40px -5px rgba(0, 0, 0, 0.13), 0px 16px 20px -6px rgba(0, 0, 0, 0.10)";
+
+// Container propagates hover/rest to children via variant context
+const shadowRecipeContainerVariants = {
+  rest: {},
+  hover: {},
+};
+
+// [timing-asymmetric] Transitions embedded INSIDE variants for asymmetric timing:
+//   hover-in  → snappier spring (DR ≈ 0.67) — glides up quickly
+//   hover-out → softer, bouncier spring (DR ≈ 0.55) — visible spring on return
+// [physics-spring-for-overshoot] Both springs are underdamped for organic overshoot
+const cardSpringIn = {
+  type: "spring" as const,
+  stiffness: 300,
+  damping: 18,
+  mass: 0.6,
+};
+
+const cardSpringOut = {
+  type: "spring" as const,
+  stiffness: 100,
+  damping: 12,
+  mass: 0.6,
+};
+
+// [gesture-while-props] Spring-based lift + scale + tilt replaces CSS hover
+// [props-transform-opacity] Animating only transform + boxShadow (compositor-friendly)
+const invoiceCardVariants = {
+  rest: {
+    y: 0,
+    scale: 1,
+    rotate: 0,
+    boxShadow: invoiceCardShadowRest,
+    transition: cardSpringOut,
+  },
+  hover: {
+    y: -2,
+    scale: 0.95,
+    rotate: -0.45,
+    boxShadow: invoiceCardShadowHover,
+    transition: cardSpringIn,
+  },
+};
+
+// [polish-reduced-motion] Opacity-only fallback — no transform movement
+const invoiceCardReducedVariants = {
+  rest: {
+    opacity: 1,
+    boxShadow: invoiceCardShadowRest,
+  },
+  hover: {
+    opacity: 0.95,
+    boxShadow: invoiceCardShadowHover,
+  },
+};
+
+// Glow gets its own softer, dreamier spring — lags slightly behind card
+// [timing-asymmetric] hover-in DR ≈ 0.53, hover-out DR ≈ 0.44 (visible pulse on return)
+const glowSpringIn = {
+  type: "spring" as const,
+  stiffness: 220,
+  damping: 14,
+  mass: 0.8,
+};
+
+const glowSpringOut = {
+  type: "spring" as const,
+  stiffness: 160,
+  damping: 14,
+  mass: 0.8,
+};
+
+const glowVariants = {
+  rest: { opacity: 0.4, scale: 1, transition: glowSpringOut },
+  hover: { opacity: 0.65, scale: 2.15, transition: glowSpringIn },
+};
+
+const glowReducedVariants = {
+  rest: { opacity: 0.4 },
+  hover: { opacity: 0.55 },
+};
+
+// Code snippet area — visible ground-settle on hover
+const codeSnippetVariants = {
+  rest: { y: 0, transition: cardSpringOut },
+  hover: { y: 4, transition: cardSpringIn },
+};
+
+const codeSnippetReducedVariants = {
+  rest: { opacity: 0.85 },
+  hover: { opacity: 1 },
+};
+
+// ── Sign button micro-interactions ──────────────────────────────────────────
+
+const signButtonShadowRest =
+  "0px 2px 4px rgba(79, 70, 229, 0.25), 0px 6px 14px rgba(79, 70, 229, 0.18)";
+const signButtonShadowHover =
+  "0px 6px 10px rgba(79, 70, 229, 0.3), 0px 12px 22px rgba(79, 70, 229, 0.2)";
+
+const signButtonVariants = {
+  rest: { y: 0, scale: 1, boxShadow: signButtonShadowRest },
+  hover: {
+    y: -1,
+    scale: 1.02,
+    boxShadow: signButtonShadowHover,
+    transition: {
+      duration: 0.22,
+      ease: [0, 0, 0.2, 1] as [number, number, number, number],
+    },
+  },
+  tap: { scale: 0.98 },
+};
+
+const signButtonReducedVariants = {
+  rest: { opacity: 1, boxShadow: signButtonShadowRest },
+  hover: { opacity: 0.92, boxShadow: signButtonShadowHover },
+  tap: { opacity: 0.86, boxShadow: signButtonShadowHover },
+};
+
+const signButtonSheenVariants = {
+  rest: { x: "-140%", opacity: 0 },
+  hover: {
+    x: "140%",
+    opacity: 0.65,
+    transition: {
+      duration: 0.45,
+      ease: [0, 0, 0.2, 1] as [number, number, number, number],
+    },
+  },
+  tap: { opacity: 0.2 },
+};
+
+const signButtonSheenReducedVariants = {
+  rest: { opacity: 0 },
+  hover: { opacity: 0 },
+  tap: { opacity: 0 },
+};
+
+const signButtonGlowVariants = {
+  rest: { opacity: 0 },
+  hover: { opacity: 0.5 },
+  tap: { opacity: 0.35 },
+};
+
+const signButtonGlowReducedVariants = {
+  rest: { opacity: 0 },
+  hover: { opacity: 0.2 },
+  tap: { opacity: 0.15 },
+};
+
+const signButtonSparkleVariants = {
+  rest: { opacity: 0, scale: 0.7 },
+  hover: {
+    opacity: 0.9,
+    scale: 1,
+    transition: {
+      duration: 0.2,
+      ease: [0, 0, 0.2, 1] as [number, number, number, number],
+    },
+  },
+  tap: { opacity: 0.6, scale: 0.9 },
+};
+
+const signButtonSparkleReducedVariants = {
+  rest: { opacity: 0 },
+  hover: { opacity: 0.2 },
+  tap: { opacity: 0.15 },
+};
+
+// ── InvoiceCard (content-only — motion wrapper provides shadow + lift) ───────
 
 function InvoiceCard() {
+  const shouldReduceMotion = useReducedMotion();
+  const buttonVars = shouldReduceMotion
+    ? signButtonReducedVariants
+    : signButtonVariants;
+  const sheenVars = shouldReduceMotion
+    ? signButtonSheenReducedVariants
+    : signButtonSheenVariants;
+  const glowVars = shouldReduceMotion
+    ? signButtonGlowReducedVariants
+    : signButtonGlowVariants;
+  const sparkleVars = shouldReduceMotion
+    ? signButtonSparkleReducedVariants
+    : signButtonSparkleVariants;
+
   return (
-    <div
-      className="relative rounded-xl p-6 bg-white cursor-pointer transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5"
-      style={{ boxShadow: invoiceCardShadow }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = invoiceCardHoverShadow;
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = invoiceCardShadow;
-      }}
-    >
+    <>
       <p className="text-xs font-mono text-neutral-400 mb-2">INV-456789</p>
-      <p className="text-3xl font-bold text-neutral-900">$284,342.57</p>
-      <p className="text-sm text-neutral-500 mt-1">Due in 15 days</p>
+      <p className="text-3xl font-bold text-neutral-900">💰 +$284,342.57</p>
+      <p className="text-sm text-neutral-500 mt-1">Incoming in 3 days</p>
       <div className="mt-4 flex items-center gap-2">
-        <div className="h-8 px-4 rounded-lg bg-indigo-600 text-white text-sm font-medium flex items-center">
-          Sign here
-        </div>
+        <m.button
+          type="button"
+          initial="rest"
+          whileHover="hover"
+          whileTap="tap"
+          variants={buttonVars}
+          className="relative h-8 px-4 rounded-lg bg-indigo-600 text-white text-sm font-medium flex items-center overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/80"
+          style={{ willChange: "transform" }}
+        >
+          <span className="relative z-10">Sign here</span>
+          <m.span
+            aria-hidden="true"
+            variants={glowVars}
+            className="absolute inset-0 bg-linear-to-r from-indigo-500/0 via-purple-400/50 to-indigo-500/0"
+          />
+          <m.span
+            aria-hidden="true"
+            variants={sheenVars}
+            className="absolute inset-y-0 -left-1/2 w-1/2 bg-linear-to-r from-white/0 via-white/50 to-white/0"
+          />
+          <m.span
+            aria-hidden="true"
+            variants={sparkleVars}
+            className="absolute -top-1 -right-1 size-2 rounded-full bg-white/90 blur-[1px]"
+          />
+        </m.button>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -354,8 +560,18 @@ const speedLayers: ParallaxLayer[] = [
     depth: 0.9,
     children: (
       <div className="w-20 h-20 rounded-2xl bg-linear-to-br from-blue-500 to-cyan-500 shadow-2xl flex items-center justify-center">
-        <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        <svg
+          className="w-12 h-12 text-white"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M13 10V3L4 14h7v7l9-11h-7z"
+          />
         </svg>
       </div>
     ),
@@ -387,9 +603,24 @@ const clarityLayers: ParallaxLayer[] = [
     depth: 0.9,
     children: (
       <div className="w-20 h-20 rounded-2xl bg-linear-to-br from-purple-500 to-indigo-500 shadow-2xl flex items-center justify-center">
-        <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        <svg
+          className="w-12 h-12 text-white"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+          />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+          />
         </svg>
       </div>
     ),
@@ -421,8 +652,18 @@ const delightLayers: ParallaxLayer[] = [
     depth: 0.9,
     children: (
       <div className="w-20 h-20 rounded-2xl bg-linear-to-br from-orange-500 to-rose-500 shadow-2xl flex items-center justify-center">
-        <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <svg
+          className="w-12 h-12 text-white"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
         </svg>
       </div>
     ),
@@ -454,8 +695,18 @@ const trustLayers: ParallaxLayer[] = [
     depth: 0.9,
     children: (
       <div className="w-20 h-20 rounded-2xl bg-linear-to-br from-emerald-500 to-teal-500 shadow-2xl flex items-center justify-center">
-        <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        <svg
+          className="w-12 h-12 text-white"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+          />
         </svg>
       </div>
     ),
@@ -465,22 +716,41 @@ const trustLayers: ParallaxLayer[] = [
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DemoPage() {
+  // [polish-reduced-motion] Detect user's motion preference for shadow recipe cards
+  const shouldReduceMotion = useReducedMotion();
+  const cardVars = shouldReduceMotion
+    ? invoiceCardReducedVariants
+    : invoiceCardVariants;
+  const glowVars = shouldReduceMotion ? glowReducedVariants : glowVariants;
+  const snippetVars = shouldReduceMotion
+    ? codeSnippetReducedVariants
+    : codeSnippetVariants;
+
   return (
     <LazyMotion features={domAnimation}>
       <div className="min-h-screen w-full bg-white overflow-auto flex flex-col items-center justify-center gap-12 p-10">
         {/* Header */}
         <div className="text-center max-w-2xl">
           <h1 className="text-4xl md:text-5xl font-bold text-neutral-900 text-balance leading-tight">
-            Designers Who Ship AI Products That Users Actually Want
+            Hire an Elite AI Designer. Ship AI Products That Win.
           </h1>
           <p className="mt-4 text-neutral-600 text-lg md:text-xl text-pretty leading-relaxed">
-            Most designers build interfaces. We build AI-native experiences that feel magical, not mechanical. 
-            <span className="font-medium text-neutral-900"> We specialize in the unique challenges of AI product design</span>—handling uncertainty, 
-            managing expectations, and creating trust when the product thinks for itself.
+            Most designers build interfaces. We craft AI experiences that feel
+            magical, not mechanical.
+            <span className="font-medium text-neutral-900">
+              {" "}
+              The best AI requires uniquely human insight:
+            </span>{" "}
+            understanding nuance, reading between the lines, and knowing what
+            feels right when machines can&apos;t. That&apos;s where we come in.
           </p>
           <p className="mt-3 text-neutral-500 text-base">
-            If you&apos;re shipping AI features and need someone who understands both design systems and AI systems, 
-            <span className="text-neutral-700 font-medium"> let&apos;s talk.</span>
+            If you&apos;re shipping AI features and need someone who understands
+            both design systems and AI systems,
+            <span className="text-neutral-700 font-medium">
+              {" "}
+              let&apos;s talk.
+            </span>
           </p>
         </div>
 
@@ -516,7 +786,7 @@ export default function DemoPage() {
         </div>
 
         {/* Parallax Design Principles Section */}
-        <div className="w-full max-w-5xl mt-24">
+        <div className="w-full max-w-5xl mt-24 flex flex-wrap items-start justify-center gap-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-neutral-900">
               How We Design
@@ -580,52 +850,228 @@ export default function DemoPage() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-start justify-center gap-12 overflow-visible">
-
-            {/* ─ Card 1: Exact shadow from the reference site ─ */}
-            <div className="flex flex-col items-center gap-3 max-w-[340px]">
-              <InvoiceCard />
-              <div className="text-center">
-                <p className="text-sm font-semibold text-neutral-700">Tailark Shadow</p>
-                <p className="text-xs text-neutral-400 mt-0.5 max-w-60">oklab ring + two offset shadows at 6% opacity</p>
-              </div>
-            </div>
-
-            {/* ─ Card 2: Blur gradient glow behind the card (always visible) ─ */}
-            <div className="flex flex-col items-center gap-3 max-w-[340px]">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 overflow-visible">
+            {/* ─ Card 1: Shadow only ─ */}
+            <m.div
+              className="flex flex-col items-center cursor-pointer"
+              initial="rest"
+              whileHover="hover"
+              whileTap={{ scale: shouldReduceMotion ? 1 : 0.98 }}
+              variants={shadowRecipeContainerVariants}
+            >
               <div className="relative overflow-visible py-10 px-8">
-                {/* The glow — static background, never changes on hover */}
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 bg-linear-to-r from-indigo-400 via-purple-400 to-pink-400 opacity-40"
-                  style={{ filter: "blur(60px)" }}
-                />
-                {/* The card itself */}
-                <InvoiceCard />
+                <m.div
+                  variants={cardVars}
+                  className="relative rounded-xl p-6 bg-white"
+                  style={{ willChange: "transform" }}
+                >
+                  <InvoiceCard />
+                </m.div>
               </div>
-              <div className="text-center">
-                <p className="text-sm font-semibold text-neutral-700">Gradient Glow</p>
-                <p className="text-xs text-neutral-400 mt-0.5 max-w-60">Static blurred gradient behind the card</p>
+              <div className="text-center mt-3">
+                <p className="text-sm font-semibold text-neutral-700">
+                  Shadow Only
+                </p>
               </div>
-            </div>
+              <m.div
+                variants={snippetVars}
+                className="mt-3 w-full rounded-lg bg-neutral-50 border border-neutral-200 p-4 text-left font-mono text-[11px] leading-relaxed text-neutral-500 space-y-2"
+              >
+                <p className="font-sans text-[10px] font-semibold uppercase text-neutral-400">
+                  box-shadow
+                </p>
+                <p>
+                  0 0 0 1px{" "}
+                  <span className="text-neutral-700">
+                    oklab(0.141 … / 7.5%)
+                  </span>
+                </p>
+                <p>
+                  0 20px 25px -5px{" "}
+                  <span className="text-neutral-700">oklab(0 0 0 / 6%)</span>
+                </p>
+                <p>
+                  0 8px 10px -6px{" "}
+                  <span className="text-neutral-700">oklab(0 0 0 / 6%)</span>
+                </p>
+                <div className="border-t border-neutral-200 pt-2 mt-2">
+                  <p className="font-sans text-[10px] font-semibold uppercase text-neutral-400">
+                    glow
+                  </p>
+                  <p className="text-neutral-400 italic">none</p>
+                </div>
+              </m.div>
+            </m.div>
 
-            {/* ─ Card 3: Cyan gradient glow (always visible, different palette) ─ */}
-            <div className="flex flex-col items-center gap-3 max-w-[340px]">
+            {/* ─ Card 2: Warm gradient glow ─ */}
+            <m.div
+              className="flex flex-col items-center cursor-pointer"
+              initial="rest"
+              whileHover="hover"
+              whileTap={{ scale: shouldReduceMotion ? 1 : 0.98 }}
+              variants={shadowRecipeContainerVariants}
+            >
               <div className="relative overflow-visible py-10 px-8">
-                <div
+                <m.div
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 bg-linear-to-r from-cyan-400 via-blue-400 to-indigo-400 opacity-40"
-                  style={{ filter: "blur(60px)" }}
+                  variants={glowVars}
+                  className="pointer-events-none absolute inset-0 bg-linear-to-r from-indigo-400 via-purple-400 to-pink-400"
+                  style={{
+                    filter: "blur(60px)",
+                    willChange: "transform, opacity",
+                  }}
                 />
-                <InvoiceCard />
+                <m.div
+                  variants={cardVars}
+                  className="relative rounded-xl p-6 bg-white"
+                  style={{ willChange: "transform" }}
+                >
+                  <InvoiceCard />
+                </m.div>
               </div>
-              <div className="text-center">
-                <p className="text-sm font-semibold text-neutral-700">Cool Glow</p>
-                <p className="text-xs text-neutral-400 mt-0.5 max-w-60">Same technique, different gradient palette</p>
+              <div className="text-center mt-3">
+                <p className="text-sm font-semibold text-neutral-700">
+                  Warm Glow
+                </p>
               </div>
-            </div>
+              <m.div
+                variants={snippetVars}
+                className="mt-3 w-full rounded-lg bg-neutral-50 border border-neutral-200 p-4 text-left font-mono text-[11px] leading-relaxed text-neutral-500 space-y-2"
+              >
+                <p className="font-sans text-[10px] font-semibold uppercase text-neutral-400">
+                  box-shadow
+                </p>
+                <p>
+                  0 0 0 1px{" "}
+                  <span className="text-neutral-700">
+                    oklab(0.141 … / 7.5%)
+                  </span>
+                </p>
+                <p>
+                  0 20px 25px -5px{" "}
+                  <span className="text-neutral-700">oklab(0 0 0 / 6%)</span>
+                </p>
+                <p>
+                  0 8px 10px -6px{" "}
+                  <span className="text-neutral-700">oklab(0 0 0 / 6%)</span>
+                </p>
+                <div className="border-t border-neutral-200 pt-2 mt-2">
+                  <p className="font-sans text-[10px] font-semibold uppercase text-neutral-400">
+                    glow
+                  </p>
+                  <p>
+                    blur: <span className="text-neutral-700">60px</span>
+                  </p>
+                  <p>
+                    opacity: <span className="text-neutral-700">40%</span>
+                  </p>
+                  <p>
+                    gradient:{" "}
+                    <span className="text-indigo-500">indigo-400</span> →{" "}
+                    <span className="text-purple-500">purple-400</span> →{" "}
+                    <span className="text-pink-500">pink-400</span>
+                  </p>
+                </div>
+              </m.div>
+            </m.div>
 
+            {/* ─ Card 3: Cool gradient glow ─ */}
+            <m.div
+              className="flex flex-col items-center cursor-pointer"
+              initial="rest"
+              whileHover="hover"
+              whileTap={{ scale: shouldReduceMotion ? 1 : 0.98 }}
+              variants={shadowRecipeContainerVariants}
+            >
+              <div className="relative overflow-visible py-10 px-8">
+                <m.div
+                  aria-hidden="true"
+                  variants={glowVars}
+                  className="pointer-events-none absolute inset-0 bg-linear-to-r from-cyan-400 via-blue-400 to-indigo-400"
+                  style={{
+                    filter: "blur(60px)",
+                    willChange: "transform, opacity",
+                  }}
+                />
+                <m.div
+                  variants={cardVars}
+                  className="relative rounded-xl p-6 bg-white"
+                  style={{ willChange: "transform" }}
+                >
+                  <InvoiceCard />
+                </m.div>
+              </div>
+              <div className="text-center mt-3">
+                <p className="text-sm font-semibold text-neutral-700">
+                  Cool Glow
+                </p>
+              </div>
+              <m.div
+                variants={snippetVars}
+                className="mt-3 w-full rounded-lg bg-neutral-50 border border-neutral-200 p-4 text-left font-mono text-[11px] leading-relaxed text-neutral-500 space-y-2"
+              >
+                <p className="font-sans text-[10px] font-semibold uppercase text-neutral-400">
+                  box-shadow
+                </p>
+                <p>
+                  0 0 0 1px{" "}
+                  <span className="text-neutral-700">
+                    oklab(0.141 … / 7.5%)
+                  </span>
+                </p>
+                <p>
+                  0 20px 25px -5px{" "}
+                  <span className="text-neutral-700">oklab(0 0 0 / 6%)</span>
+                </p>
+                <p>
+                  0 8px 10px -6px{" "}
+                  <span className="text-neutral-700">oklab(0 0 0 / 6%)</span>
+                </p>
+                <div className="border-t border-neutral-200 pt-2 mt-2">
+                  <p className="font-sans text-[10px] font-semibold uppercase text-neutral-400">
+                    glow
+                  </p>
+                  <p>
+                    blur: <span className="text-neutral-700">60px</span>
+                  </p>
+                  <p>
+                    opacity: <span className="text-neutral-700">40%</span>
+                  </p>
+                  <p>
+                    gradient: <span className="text-cyan-500">cyan-400</span> →{" "}
+                    <span className="text-blue-500">blue-400</span> →{" "}
+                    <span className="text-indigo-500">indigo-400</span>
+                  </p>
+                </div>
+              </m.div>
+            </m.div>
           </div>
+        </div>
+
+        {/* ── Reusable Gradient Glow Test Div ──────────────────────────────── */}
+        <div className="w-full max-w-5xl mt-24 mb-12">
+          <div className="text-center mb-6">
+            <h3 className="text-xl font-semibold text-neutral-900">
+              Gradient Glow Sample
+            </h3>
+            <p className="mt-2 text-sm text-neutral-600">
+              Reusable warm glow gradient (from card 2) — can be placed behind
+              objects
+            </p>
+          </div>
+          <div className="flex justify-center pointer-events-none">
+            <div
+              className="w-64 h-64 rounded-lg bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 pointer-events-none"
+              style={{
+                filter: "blur(120px)",
+                opacity: 0.88,
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="w-full flex justify-center">
+          <PricingCard />
         </div>
       </div>
     </LazyMotion>

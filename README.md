@@ -16,6 +16,7 @@ bun dev
 
 Or this crappy way to vercel deply that reaches outside of this directory:
 ```
+VERCEL DEPLOY
 cd /Users/ck/Documents/harvard-dev/ai-workflow && bash /Users/ck/.codex/skills/vercel-deploy/scripts/deploy.sh
 
 THEN to check after waiting:
